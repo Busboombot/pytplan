@@ -1,1 +1,1 @@
-from pytplan.test import *
+from testlib import *

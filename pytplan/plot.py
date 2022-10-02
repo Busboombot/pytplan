@@ -72,7 +72,7 @@ def plot_trajectory(df, ax=None):
     return ax
 
 def plot_params_df(*args):
-    from trajectory.gsolver import Block
+    from .gsolver import Block
 
     import numpy as np
 
@@ -129,7 +129,7 @@ def plot_params(*args, ax=None):
 
 def seg_step(sl, details=None):
     """Produce a dataset by stepping through a segment list"""
-    from trajectory.stepper import DEFAULT_PERIOD, TIMEBASE
+    from .stepper import DEFAULT_PERIOD, TIMEBASE
 
     if details:
         return pd.DataFrame(list(sl.step(details=details))).set_index('t')
