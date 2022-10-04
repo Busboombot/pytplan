@@ -63,6 +63,8 @@ class Segment(object):
     replans: int = 0
 
     def __init__(self, n, joints: List[Joint], move: List[int] = None, prior: "Segment" = None):
+        """
+        """
 
         self.n = n
         self.joints = joints
@@ -84,7 +86,10 @@ class Segment(object):
                     b.segment = self
 
     def plan(self, v_0=None, v_1=None, prior=None, next_=None, t=None, iter=10):
-
+        """
+        v_0 and v_1 are strings that are interpreted in set_bv, like "next",
+        "prior" and v_max
+        """
         # Planning can change the time for a block, so planning multiple
         # will ( should ) converge on a singe segment time.
 
@@ -116,6 +121,20 @@ class Segment(object):
 
         self.t = self.time
         return self
+
+    def vplan(self,  prior=None, next_=None, t=None):
+        """Velocity plan. Set the velocity without regard to distance"""
+
+        min_time = lambda : max(b.t for b in self.blocks)
+
+        mt = t if t else min_time()
+
+        for i, b in enumerate(self.blocks):
+            pb = prior.blocks[i] if prior is not None else None
+            nb = next_.blocks[i] if next_ is not None else None
+
+            b.vplan(mt, pb, nb)
+
 
     def zero(self):
         for b in self.blocks:
@@ -241,10 +260,7 @@ class SegmentList(object):
 
         self.planner_position = pos
 
-    def move(self, x: List[int], v_max: List[int] = None):
-        """Add a new segment, with joints expressing joint distance
-        :type x: object
-        """
+    def add_segment(self, x: List[int], v_max: List[int] = None):
 
         for i, x_ in enumerate(x):
             self.planner_position[i] += x_
@@ -262,6 +278,15 @@ class SegmentList(object):
                 b.v_c_max = vm
 
         self.segments.append(s)
+
+        return s, prior
+
+    def move(self, x: List[int], v_max: List[int] = None):
+        """Add a new segment, with joints expressing joint distance
+        :type x: object
+        """
+
+        s, prior = self.add_segment( x, v_max)
 
         if prior is None:
             s.plan(v_0=0, v_1=0)
@@ -287,9 +312,19 @@ class SegmentList(object):
         v_max = max(v)
         x_max = v_max * t
 
-        move = [x_max * (v_ / v_max) for v_ in v]
+        x = [x_max * (v_ / v_max) for v_ in v]
 
-        return self.move(move, v_max=v)
+        s, prior = self.add_segment(x, v)
+
+        if prior is None:
+            s.vplan(t=t)
+        else:
+            prior.vplan( prior=prior.prior)
+            s.vplan(t=t, prior=prior)
+
+        self.queue_length +=1
+        self.queue_time = sum(s.t for s in self.segments) # Because times will change with replanning
+
 
     def jmove(self, t, v: List[int]):
         """Like a vmove, but also removes all but the last two segments"""

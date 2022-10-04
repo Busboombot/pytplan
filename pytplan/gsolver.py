@@ -261,6 +261,37 @@ class Block:
 
         return self
 
+    def vplan(self, t=None,  prior=None, next_=None):
+
+        self.v_c = self.v_c_max
+
+        if prior:
+            if not same_sign(self.d, prior.d):
+                self.v_0 = prior.v_1 = 0;
+            else:
+                self.v_0 = prior.v_1 = (self.v_c+prior.v_c) / 2
+        else:
+            self.v_0 = 0
+
+        if next_:
+            if not same_sign(self.d, next.d):
+                self.v_1 = next_.v_0 = 0;
+            else:
+                self.v_1 = next_.v_0 = (self.v_c+next_.v_c) / 2
+
+        else:
+            self.v_1 = 0;
+
+        self.x_a, self.t_a = accel_xt(self.v_0, self.v_c, self.joint.a_max)
+        self.x_d, self.t_d = accel_xt(self.v_c, self.v_1, self.joint.a_max)
+
+        self.t_c = max(t-(self.t_a+self.t_d), 0)
+        self.x_c = self.t_c * self.v_c
+
+        self.t = self.t_a + self.t_c + self.t_d
+
+
+
     def set_bv(self, v_0=None, v_1=None, prior=None, next_=None):
 
         if v_0 == 'prior' and prior is not None:
