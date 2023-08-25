@@ -3,7 +3,7 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 from warnings import warn
-
+from itertools import chain
 
 def sel_axis(df, axis):
     t = df[df.axis == axis].copy()
@@ -127,12 +127,14 @@ def plot_params(*args, ax=None):
 
     return ax
 
-def seg_step(sl, details=None):
+def seg_step_df(sl, details=None):
     """Produce a dataset by stepping through a segment list"""
     from .stepper import DEFAULT_PERIOD, TIMEBASE
 
     if details:
-        return pd.DataFrame(list(sl.step(details=details))).set_index('t')
+        l = list(chain(*list(sl.step(True))))
+        df = pd.DataFrame(l)
+        return pd.DataFrame(l).set_index('t')
     else:
         l = list(sl.step())
 
@@ -144,12 +146,12 @@ def seg_step(sl, details=None):
 def step_plot(sl, ax=None):
     """ Plot the first two axes of a stepper dataset, generated froma SegmentList,
     as a 2D plot"""
-    df = seg_step(sl).cumsum()
+    df = seg_step_df(sl).cumsum()
     df.plot('x', 'y', ax=ax)
 
 
 def step_v_df(sl):
-    df = seg_step(sl).reset_index()
+    df = seg_step_df(sl).reset_index()
 
     t = df[['t', 'x']]
     t = t[t.x != 0]
@@ -161,7 +163,7 @@ def step_v_df(sl):
 
 def v_diff(sl):
 
-    df = seg_step(sl)
+    df = seg_step_df(sl)
 
     t = df.reset_index()
     nz = t[t.s != 0].copy()
@@ -180,7 +182,7 @@ def step_v_plot(sl, ax=None):
 
 
 def stepper_plot(sl):
-    fig = plt.figure(figsize=(8, 8), constrained_layout=True)
+    fig = plt.figure(figsize=(16, 8), constrained_layout=True)
     spec = fig.add_gridspec(2, 2)
 
     ax1 = fig.add_subplot(spec[0, :])

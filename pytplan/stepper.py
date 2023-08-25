@@ -30,10 +30,12 @@ class Stepper(object):
 
     done: bool = False
 
+    phase_times = [None,None,None]
 
-    def __init__(self, period=DEFAULT_PERIOD, details=False):
+    def __init__(self, axis=None, period=DEFAULT_PERIOD, details=False):
         """Return segment parameters given the initial velocity, final velocity, and distance traveled. """
 
+        self.axis = axis
         self.period = period
         self.delay_inc = period / TIMEBASE
         self.delay_counter = 0
@@ -60,9 +62,11 @@ class Stepper(object):
         self.phase = 0
         self.done = False
 
+
+
     def init_next_phase(self):
 
-        x, vi, vf = self.phases[self.phase]
+        t, x, vi, vf = self.phases[self.phase]
 
         self.direction = sign(x)
 
@@ -92,14 +96,20 @@ class Stepper(object):
 
         self.done = False
 
+        return self
+
     def next(self):
 
         if self.steps_left <= 0 or self.periods_left <= 0:
             if self.done or self.phase == 3:
+                self.phase_times[self.phase - 1] = self.t
                 self.done = True
+                self.t += self.delay_inc
                 return 0
             else:
                 self.init_next_phase()
+                if self.phase > 0:
+                    self.phase_times[self.phase-1] = self.t
                 self.phase += 1
 
         if self.delay_counter > self.delay:
@@ -123,22 +133,23 @@ class Stepper(object):
         self.calc_x = abs((self.a * self.phase_t ** 2) / 2 + self.vi * self.phase_t)
         self.x_err = self.steps_stepped - self.calc_x
 
-        if abs(self.x_err) > .5 and self.phase == 1:
-            s = self.x_err / abs(self.x_err)
-            self.delay_counter += -s * self.delay_inc * .1
+        #if abs(self.x_err) > .5 and self.phase == 1:
+        #    s = self.x_err / abs(self.x_err)
+        #    self.delay_counter += -s * self.delay_inc * .1
 
         return r
 
-    def next_details(self):
+    def next_details(self, seg=None):
         step = self.next()
-        d = dict(s=step, dr=self.direction, t=self.t, pt=self.phase_t, tf=self.t_f, v=self.v,
+        d = dict(
+            t=self.t, seg=seg, axis=self.axis,  ph=self.phase,
+            s=step, dr=self.direction,  pt=self.phase_t, tf=self.t_f, v=self.v,
                  a=self.a,
                  # vi=self.vi, vf=self.vf,
                  sl=self.steps_left, pl=self.periods_left,
-                 sg=None, ph=self.phase,
                  dl=self.delay, dc=self.delay_counter,
                  xc=self.calc_x, xe=self.x_err,
-                 # isdone=self.done
+                 isdone=self.done
                  )
 
         return d
@@ -173,6 +184,7 @@ class SegmentStepper:
 
     def step(self):
         import numpy as np
+
 
         if len(self.sl.segments) == 0:
             return None

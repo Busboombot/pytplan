@@ -499,7 +499,7 @@ class SegmentList(object):
         dt = period / TIMEBASE
         t = 0
 
-        steppers = [Stepper(details=details) for _ in self.joints]
+        steppers = [Stepper(details=details, axis=axis) for axis, _ in enumerate(self.joints)]
 
         for seg_n, stepper_blocks in self.stepper_blocks:
 
@@ -508,9 +508,9 @@ class SegmentList(object):
 
             if details:
                 while not steppers[0].done and not all([stp.done for stp in steppers]):
-                    d = steppers[0].next_details()
-                    d['sg'] = seg_n
-                    yield d
+
+                    details = [s.next_details(seg_n) for i, s in enumerate(steppers)]
+                    yield details
             else:
                 while not steppers[0].done and not all([stp.done for stp in steppers]):
                     steps = [stp.next() for stp in steppers]

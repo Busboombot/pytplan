@@ -478,17 +478,23 @@ class Block:
         # adjusts accelerations, so all stepped block have the same time
 
         return (
-            (ri(self.d * self.x_a), ri(self.d * self.v_0), ri(self.d * self.v_c)),
-            (ri(self.d * self.x_c), ri(self.d * self.v_c), ri(self.d * self.v_c)),
-            (ri(self.d * self.x_d), ri(self.d * self.v_c), ri(self.d * self.v_1))
+            (self.t_a, ri(self.d * self.x_a), ri(self.d * self.v_0), ri(self.d * self.v_c)),
+            (self.t_c, ri(self.d * self.x_c), ri(self.d * self.v_c), ri(self.d * self.v_c)),
+            (self.t_d, ri(self.d * self.x_d), ri(self.d * self.v_c), ri(self.d * self.v_1))
         )
 
-    def step(self, period=DEFAULT_PERIOD, details=False):
+    def stepper(self, period=DEFAULT_PERIOD, details=False):
+
         stp = Stepper(period, details=details)
 
-        t = 0
+        stp.load_phases(self.stepper_blocks())
 
-        stp.load_phases(self.stepper_blocks(self.t))
+        return stp;
+
+    def step(self, period=DEFAULT_PERIOD, details=False):
+        stp = self.stepper(period, details)
+
+        t = 0
 
         while not stp.done:
             if details:
